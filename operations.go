@@ -31,7 +31,14 @@ func (c *Client) AddTeamMember(ctx context.Context, in AddTeamMemberInput) (Team
 	u := c.endpoint + path
 
 	var bodyReader io.Reader
-	body, err := json.Marshal(in)
+	// Only body members: path, query and header members are not serialized.
+	body, err := json.Marshal(struct {
+		UserId string `json:"user_id"`
+		Role   string `json:"role,omitempty"`
+	}{
+		UserId: in.UserId,
+		Role:   in.Role,
+	})
 	if err != nil {
 		return zero, fmt.Errorf("AddTeamMember: marshal body: %w", err)
 	}
@@ -72,7 +79,14 @@ func (c *Client) AssumeRole(ctx context.Context, in AssumeRoleInput) (AssumeRole
 	u := c.endpoint + path
 
 	var bodyReader io.Reader
-	body, err := json.Marshal(in)
+	// Only body members: path, query and header members are not serialized.
+	body, err := json.Marshal(struct {
+		Context  *StringMap `json:"context,omitempty"`
+		Duration int        `json:"duration,omitempty"`
+	}{
+		Context:  in.Context,
+		Duration: in.Duration,
+	})
 	if err != nil {
 		return zero, fmt.Errorf("AssumeRole: marshal body: %w", err)
 	}
@@ -307,6 +321,47 @@ func (c *Client) CreateTeam(ctx context.Context, in CreateTeamInput) (Team, erro
 	var out Team
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return zero, fmt.Errorf("CreateTeam: decode response: %w", err)
+	}
+	return out, nil
+}
+
+// CreateTenant calls POST /iam/tenants.
+func (c *Client) CreateTenant(ctx context.Context, in CreateTenantInput) (CreateTenantOutput, error) {
+	var zero CreateTenantOutput
+	path := "/iam/tenants"
+	u := c.endpoint + path
+
+	var bodyReader io.Reader
+	body, err := json.Marshal(in)
+	if err != nil {
+		return zero, fmt.Errorf("CreateTenant: marshal body: %w", err)
+	}
+	bodyReader = bytes.NewReader(body)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", u, bodyReader)
+	if err != nil {
+		return zero, fmt.Errorf("CreateTenant: new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return zero, fmt.Errorf("CreateTenant: http do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return zero, decodeError(resp)
+	}
+	if resp.StatusCode == http.StatusNoContent {
+		return zero, nil
+	}
+	var out CreateTenantOutput
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return zero, fmt.Errorf("CreateTenant: decode response: %w", err)
 	}
 	return out, nil
 }
@@ -758,6 +813,42 @@ func (c *Client) GetTeam(ctx context.Context, in TeamIdInput) (Team, error) {
 	return out, nil
 }
 
+// GetTenant calls GET /iam/tenants/{tenant}.
+func (c *Client) GetTenant(ctx context.Context, in TenantInput) (Tenant, error) {
+	var zero Tenant
+	path := fmt.Sprintf("/iam/tenants/%s", url.PathEscape(in.Tenant))
+	u := c.endpoint + path
+
+	var bodyReader io.Reader
+
+	req, err := http.NewRequestWithContext(ctx, "GET", u, bodyReader)
+	if err != nil {
+		return zero, fmt.Errorf("GetTenant: new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return zero, fmt.Errorf("GetTenant: http do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return zero, decodeError(resp)
+	}
+	if resp.StatusCode == http.StatusNoContent {
+		return zero, nil
+	}
+	var out Tenant
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return zero, fmt.Errorf("GetTenant: decode response: %w", err)
+	}
+	return out, nil
+}
+
 // GetUser calls GET /iam/users/{userId}.
 func (c *Client) GetUser(ctx context.Context, in UserIdInput) (User, error) {
 	var zero User
@@ -987,6 +1078,42 @@ func (c *Client) ListTeams(ctx context.Context) (ListTeamsOutput, error) {
 	return out, nil
 }
 
+// ListTenantDataHooks calls GET /iam/tenant-hooks.
+func (c *Client) ListTenantDataHooks(ctx context.Context) (ListTenantDataHooksOutput, error) {
+	var zero ListTenantDataHooksOutput
+	path := "/iam/tenant-hooks"
+	u := c.endpoint + path
+
+	var bodyReader io.Reader
+
+	req, err := http.NewRequestWithContext(ctx, "GET", u, bodyReader)
+	if err != nil {
+		return zero, fmt.Errorf("ListTenantDataHooks: new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return zero, fmt.Errorf("ListTenantDataHooks: http do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return zero, decodeError(resp)
+	}
+	if resp.StatusCode == http.StatusNoContent {
+		return zero, nil
+	}
+	var out ListTenantDataHooksOutput
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return zero, fmt.Errorf("ListTenantDataHooks: decode response: %w", err)
+	}
+	return out, nil
+}
+
 // ListUsers calls GET /iam/users.
 func (c *Client) ListUsers(ctx context.Context) (ListUsersOutput, error) {
 	var zero ListUsersOutput
@@ -1023,6 +1150,42 @@ func (c *Client) ListUsers(ctx context.Context) (ListUsersOutput, error) {
 	return out, nil
 }
 
+// OffboardTenant calls POST /iam/tenants/{tenant}/offboard.
+func (c *Client) OffboardTenant(ctx context.Context, in TenantInput) (OffboardTenantOutput, error) {
+	var zero OffboardTenantOutput
+	path := fmt.Sprintf("/iam/tenants/%s/offboard", url.PathEscape(in.Tenant))
+	u := c.endpoint + path
+
+	var bodyReader io.Reader
+
+	req, err := http.NewRequestWithContext(ctx, "POST", u, bodyReader)
+	if err != nil {
+		return zero, fmt.Errorf("OffboardTenant: new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return zero, fmt.Errorf("OffboardTenant: http do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return zero, decodeError(resp)
+	}
+	if resp.StatusCode == http.StatusNoContent {
+		return zero, nil
+	}
+	var out OffboardTenantOutput
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return zero, fmt.Errorf("OffboardTenant: decode response: %w", err)
+	}
+	return out, nil
+}
+
 // PatchRoleStatements calls PATCH /iam/roles/{slug}/statements.
 func (c *Client) PatchRoleStatements(ctx context.Context, in PatchRoleStatementsInput) (Role, error) {
 	var zero Role
@@ -1030,7 +1193,12 @@ func (c *Client) PatchRoleStatements(ctx context.Context, in PatchRoleStatements
 	u := c.endpoint + path
 
 	var bodyReader io.Reader
-	body, err := json.Marshal(in)
+	// Only body members: path, query and header members are not serialized.
+	body, err := json.Marshal(struct {
+		Statements []*PolicyStatement `json:"statements"`
+	}{
+		Statements: in.Statements,
+	})
 	if err != nil {
 		return zero, fmt.Errorf("PatchRoleStatements: marshal body: %w", err)
 	}
@@ -1071,7 +1239,12 @@ func (c *Client) ProvisionTenant(ctx context.Context, in ProvisionTenantInput) (
 	u := c.endpoint + path
 
 	var bodyReader io.Reader
-	body, err := json.Marshal(in)
+	// Only body members: path, query and header members are not serialized.
+	body, err := json.Marshal(struct {
+		RootUser *RootUserSpec `json:"root_user,omitempty"`
+	}{
+		RootUser: in.RootUser,
+	})
 	if err != nil {
 		return zero, fmt.Errorf("ProvisionTenant: marshal body: %w", err)
 	}
@@ -1101,6 +1274,42 @@ func (c *Client) ProvisionTenant(ctx context.Context, in ProvisionTenantInput) (
 	var out ProvisionTenantOutput
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return zero, fmt.Errorf("ProvisionTenant: decode response: %w", err)
+	}
+	return out, nil
+}
+
+// RegisterTenantDataHook calls PUT /iam/tenant-hooks/{service}.
+func (c *Client) RegisterTenantDataHook(ctx context.Context, in TenantDataHookInput) (TenantDataHook, error) {
+	var zero TenantDataHook
+	path := fmt.Sprintf("/iam/tenant-hooks/%s", url.PathEscape(in.Service))
+	u := c.endpoint + path
+
+	var bodyReader io.Reader
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", u, bodyReader)
+	if err != nil {
+		return zero, fmt.Errorf("RegisterTenantDataHook: new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return zero, fmt.Errorf("RegisterTenantDataHook: http do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return zero, decodeError(resp)
+	}
+	if resp.StatusCode == http.StatusNoContent {
+		return zero, nil
+	}
+	var out TenantDataHook
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return zero, fmt.Errorf("RegisterTenantDataHook: decode response: %w", err)
 	}
 	return out, nil
 }
@@ -1174,6 +1383,52 @@ func (c *Client) ResolveSession(ctx context.Context, in ResolveSessionInput) (Se
 	return out, nil
 }
 
+// SuspendTenant calls POST /iam/tenants/{tenant}/suspend.
+func (c *Client) SuspendTenant(ctx context.Context, in SuspendTenantInput) (Tenant, error) {
+	var zero Tenant
+	path := fmt.Sprintf("/iam/tenants/%s/suspend", url.PathEscape(in.Tenant))
+	u := c.endpoint + path
+
+	var bodyReader io.Reader
+	// Only body members: path, query and header members are not serialized.
+	body, err := json.Marshal(struct {
+		Reason string `json:"reason,omitempty"`
+	}{
+		Reason: in.Reason,
+	})
+	if err != nil {
+		return zero, fmt.Errorf("SuspendTenant: marshal body: %w", err)
+	}
+	bodyReader = bytes.NewReader(body)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", u, bodyReader)
+	if err != nil {
+		return zero, fmt.Errorf("SuspendTenant: new request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return zero, fmt.Errorf("SuspendTenant: http do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return zero, decodeError(resp)
+	}
+	if resp.StatusCode == http.StatusNoContent {
+		return zero, nil
+	}
+	var out Tenant
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return zero, fmt.Errorf("SuspendTenant: decode response: %w", err)
+	}
+	return out, nil
+}
+
 // UpdateRole calls PUT /iam/roles/{slug}.
 func (c *Client) UpdateRole(ctx context.Context, in UpdateRoleInput) (Role, error) {
 	var zero Role
@@ -1181,7 +1436,20 @@ func (c *Client) UpdateRole(ctx context.Context, in UpdateRoleInput) (Role, erro
 	u := c.endpoint + path
 
 	var bodyReader io.Reader
-	body, err := json.Marshal(in)
+	// Only body members: path, query and header members are not serialized.
+	body, err := json.Marshal(struct {
+		Name        string             `json:"name,omitempty"`
+		Description string             `json:"description,omitempty"`
+		OwnerTeam   string             `json:"owner_team,omitempty"`
+		TrustPolicy *TrustPolicy       `json:"trust_policy,omitempty"`
+		Statements  []*PolicyStatement `json:"statements,omitempty"`
+	}{
+		Name:        in.Name,
+		Description: in.Description,
+		OwnerTeam:   in.OwnerTeam,
+		TrustPolicy: in.TrustPolicy,
+		Statements:  in.Statements,
+	})
 	if err != nil {
 		return zero, fmt.Errorf("UpdateRole: marshal body: %w", err)
 	}
@@ -1222,7 +1490,16 @@ func (c *Client) UpdateTeam(ctx context.Context, in UpdateTeamInput) (Team, erro
 	u := c.endpoint + path
 
 	var bodyReader io.Reader
-	body, err := json.Marshal(in)
+	// Only body members: path, query and header members are not serialized.
+	body, err := json.Marshal(struct {
+		Name        string `json:"name,omitempty"`
+		Description string `json:"description,omitempty"`
+		ParentId    string `json:"parent_id,omitempty"`
+	}{
+		Name:        in.Name,
+		Description: in.Description,
+		ParentId:    in.ParentId,
+	})
 	if err != nil {
 		return zero, fmt.Errorf("UpdateTeam: marshal body: %w", err)
 	}
@@ -1263,7 +1540,16 @@ func (c *Client) UpdateUser(ctx context.Context, in UpdateUserInput) (User, erro
 	u := c.endpoint + path
 
 	var bodyReader io.Reader
-	body, err := json.Marshal(in)
+	// Only body members: path, query and header members are not serialized.
+	body, err := json.Marshal(struct {
+		Email       string `json:"email,omitempty"`
+		DisplayName string `json:"display_name,omitempty"`
+		TenantId    string `json:"tenant_id,omitempty"`
+	}{
+		Email:       in.Email,
+		DisplayName: in.DisplayName,
+		TenantId:    in.TenantId,
+	})
 	if err != nil {
 		return zero, fmt.Errorf("UpdateUser: marshal body: %w", err)
 	}
