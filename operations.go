@@ -81,8 +81,8 @@ func (c *Client) AssumeRole(ctx context.Context, in AssumeRoleInput) (AssumeRole
 	var bodyReader io.Reader
 	// Only body members: path, query and header members are not serialized.
 	body, err := json.Marshal(struct {
-		Context  *StringMap `json:"context,omitempty"`
-		Duration int        `json:"duration,omitempty"`
+		Context  map[string]string `json:"context,omitempty"`
+		Duration int               `json:"duration,omitempty"`
 	}{
 		Context:  in.Context,
 		Duration: in.Duration,

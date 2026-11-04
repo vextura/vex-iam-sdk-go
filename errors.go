@@ -32,8 +32,29 @@ func (e ErrorEnvelope) Error() string {
 	if e.Message != "" {
 		return e.Message
 	}
+	if e.Code != "" {
+		return e.Code
+	}
+	// A body that is not the envelope (plain text, `{"error": ...}` from a
+	// non-generated handler, or empty) must still say what happened: the HTTP
+	// status is always known, "unknown error" never is useful.
+	if e.Status > 0 {
+		return fmt.Sprintf("HTTP %d %s", e.Status, http.StatusText(e.Status))
+	}
 	return "unknown error"
 }
+
+// statusError carries the decoded envelope plus the sentinel for its status.
+// It prints as ONE line (the envelope) while errors.Is(err, ErrNotFound) and
+// errors.As(err, &ErrorEnvelope{}) both still match; errors.Join printed the
+// envelope and the sentinel on two lines.
+type statusError struct {
+	env      ErrorEnvelope
+	sentinel error
+}
+
+func (e statusError) Error() string   { return e.env.Error() }
+func (e statusError) Unwrap() []error { return []error{e.env, e.sentinel} }
 
 // OAuth2Error is the RFC 6749 §5.2 error response shape. Returned by any
 // endpoint that emits an OAuth2 error envelope (typically /auth/token and
@@ -88,10 +109,19 @@ func decodeError(resp *http.Response) error {
 	var env ErrorEnvelope
 	body, _ := io.ReadAll(resp.Body)
 	_ = json.Unmarshal(body, &env)
+	if env.Message == "" {
+		// Non-generated handlers answer {"error": "..."}; keep their text.
+		var alt struct {
+			Error string `json:"error"`
+		}
+		if json.Unmarshal(body, &alt) == nil {
+			env.Message = alt.Error
+		}
+	}
 	env.Status = resp.StatusCode
 	sentinel := sentinelFor(env.Code, resp.StatusCode)
 	if sentinel != nil {
-		return errors.Join(env, sentinel)
+		return statusError{env: env, sentinel: sentinel}
 	}
 	return env
 }
@@ -125,7 +155,7 @@ func decodeOAuth2ErrorOrFallback(resp *http.Response) error {
 		env.Status = resp.StatusCode
 		sentinel := sentinelFor(env.Code, resp.StatusCode)
 		if sentinel != nil {
-			return errors.Join(env, sentinel)
+			return statusError{env: env, sentinel: sentinel}
 		}
 		return env
 	}

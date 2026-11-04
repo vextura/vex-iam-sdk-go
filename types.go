@@ -12,15 +12,15 @@ type AddTeamMemberInput struct {
 
 // AssumeRoleInput mirrors the Smithy structure of the same name.
 type AssumeRoleInput struct {
-	Slug     string     `json:"slug"`
-	Context  *StringMap `json:"context,omitempty"`
-	Duration int        `json:"duration,omitempty"`
+	Slug     string            `json:"slug"`
+	Context  map[string]string `json:"context,omitempty"`
+	Duration int               `json:"duration,omitempty"`
 }
 
 // AssumeRoleOutput mirrors the Smithy structure of the same name.
 type AssumeRoleOutput struct {
 	SessionToken string `json:"session_token"`
-	ExpiresAt    string `json:"expires_at"`
+	ExpiresAt    string `json:"expires_at,omitempty"`
 	RoleSlug     string `json:"role_slug"`
 }
 
@@ -38,7 +38,7 @@ type AuditEntry struct {
 	TenantId      string `json:"tenant_id,omitempty"`
 	TargetTenant  string `json:"target_tenant,omitempty"`
 	CrossTenant   bool   `json:"cross_tenant,omitempty"`
-	CreatedAt     string `json:"created_at"`
+	CreatedAt     string `json:"created_at,omitempty"`
 }
 
 // AuthzDecision mirrors the Smithy structure of the same name.
@@ -50,11 +50,11 @@ type AuthzDecision struct {
 
 // AuthzRequest mirrors the Smithy structure of the same name.
 type AuthzRequest struct {
-	Principal   *PrincipalRef `json:"principal"`
-	Action      string        `json:"action"`
-	Resource    string        `json:"resource"`
-	Context     *StringMap    `json:"context,omitempty"`
-	AssumedRole string        `json:"assumed_role,omitempty"`
+	Principal   *PrincipalRef     `json:"principal"`
+	Action      string            `json:"action"`
+	Resource    string            `json:"resource"`
+	Context     map[string]string `json:"context,omitempty"`
+	AssumedRole string            `json:"assumed_role,omitempty"`
 }
 
 // BindingIdInput mirrors the Smithy structure of the same name.
@@ -80,7 +80,7 @@ type CreateResourceInput struct {
 	PrimaryOwner   string             `json:"primary_owner,omitempty"`
 	SecondaryOwner string             `json:"secondary_owner,omitempty"`
 	Policy         []*PolicyStatement `json:"policy,omitempty"`
-	Metadata       *StringMap         `json:"metadata,omitempty"`
+	Metadata       map[string]string  `json:"metadata,omitempty"`
 	TenantId       string             `json:"tenant_id,omitempty"`
 }
 
@@ -198,11 +198,11 @@ type PatchRoleStatementsInput struct {
 
 // PolicyStatement mirrors the Smithy structure of the same name.
 type PolicyStatement struct {
-	Sid        string         `json:"sid,omitempty"`
-	Effect     string         `json:"effect"`
-	Actions    []string       `json:"actions"`
-	Resources  []string       `json:"resources"`
-	Conditions *StringListMap `json:"conditions,omitempty"`
+	Sid        string              `json:"sid,omitempty"`
+	Effect     string              `json:"effect"`
+	Actions    []string            `json:"actions"`
+	Resources  []string            `json:"resources"`
+	Conditions map[string][]string `json:"conditions,omitempty"`
 }
 
 // PrincipalInput mirrors the Smithy structure of the same name.
@@ -256,10 +256,10 @@ type Resource struct {
 	PrimaryOwner   string             `json:"primary_owner,omitempty"`
 	SecondaryOwner string             `json:"secondary_owner,omitempty"`
 	Policy         []*PolicyStatement `json:"policy,omitempty"`
-	Metadata       *StringMap         `json:"metadata,omitempty"`
+	Metadata       map[string]string  `json:"metadata,omitempty"`
 	TenantId       string             `json:"tenant_id,omitempty"`
-	CreatedAt      string             `json:"created_at"`
-	UpdatedAt      string             `json:"updated_at"`
+	CreatedAt      string             `json:"created_at,omitempty"`
+	UpdatedAt      string             `json:"updated_at,omitempty"`
 }
 
 // ResourceIdInput mirrors the Smithy structure of the same name.
@@ -276,8 +276,8 @@ type Role struct {
 	OwnerTeam   string             `json:"owner_team,omitempty"`
 	TrustPolicy *TrustPolicy       `json:"trust_policy"`
 	Statements  []*PolicyStatement `json:"statements,omitempty"`
-	CreatedAt   string             `json:"created_at"`
-	UpdatedAt   string             `json:"updated_at"`
+	CreatedAt   string             `json:"created_at,omitempty"`
+	UpdatedAt   string             `json:"updated_at,omitempty"`
 }
 
 // RoleBinding mirrors the Smithy structure of the same name.
@@ -290,7 +290,7 @@ type RoleBinding struct {
 	Scope         string `json:"scope,omitempty"`
 	TenantId      string `json:"tenant_id,omitempty"`
 	ExpiresAt     string `json:"expires_at,omitempty"`
-	CreatedAt     string `json:"created_at"`
+	CreatedAt     string `json:"created_at,omitempty"`
 }
 
 // RootUserSpec mirrors the Smithy structure of the same name.
@@ -312,14 +312,6 @@ type SlugInput struct {
 	Slug string `json:"slug"`
 }
 
-// StringListMap mirrors the Smithy structure of the same name.
-type StringListMap struct {
-}
-
-// StringMap mirrors the Smithy structure of the same name.
-type StringMap struct {
-}
-
 // SuspendTenantInput mirrors the Smithy structure of the same name.
 type SuspendTenantInput struct {
 	Tenant string `json:"tenant"`
@@ -334,7 +326,7 @@ type Team struct {
 	Description string `json:"description,omitempty"`
 	ParentId    string `json:"parent_id,omitempty"`
 	TenantId    string `json:"tenant_id,omitempty"`
-	CreatedAt   string `json:"created_at"`
+	CreatedAt   string `json:"created_at,omitempty"`
 	UpdatedAt   string `json:"updated_at,omitempty"`
 }
 
@@ -348,7 +340,7 @@ type TeamMember struct {
 	TeamId    string `json:"team_id"`
 	UserId    string `json:"user_id"`
 	Role      string `json:"role"`
-	CreatedAt string `json:"created_at"`
+	CreatedAt string `json:"created_at,omitempty"`
 }
 
 // TeamMemberInput mirrors the Smithy structure of the same name.
@@ -362,14 +354,14 @@ type Tenant struct {
 	Tenant    string `json:"tenant"`
 	Status    string `json:"status"`
 	Reason    string `json:"reason,omitempty"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	CreatedAt string `json:"created_at,omitempty"`
+	UpdatedAt string `json:"updated_at,omitempty"`
 }
 
 // TenantDataHook mirrors the Smithy structure of the same name.
 type TenantDataHook struct {
 	Service   string `json:"service"`
-	CreatedAt string `json:"created_at"`
+	CreatedAt string `json:"created_at,omitempty"`
 }
 
 // TenantDataHookInput mirrors the Smithy structure of the same name.
@@ -394,9 +386,9 @@ type TenantInput struct {
 
 // TrustPolicy mirrors the Smithy structure of the same name.
 type TrustPolicy struct {
-	Principals  []*PrincipalRef `json:"principals"`
-	Conditions  *StringListMap  `json:"conditions,omitempty"`
-	MaxDuration int             `json:"max_duration,omitempty"`
+	Principals  []*PrincipalRef     `json:"principals"`
+	Conditions  map[string][]string `json:"conditions,omitempty"`
+	MaxDuration int                 `json:"max_duration,omitempty"`
 }
 
 // UpdateRoleInput mirrors the Smithy structure of the same name.
@@ -432,8 +424,8 @@ type User struct {
 	Email       string `json:"email,omitempty"`
 	DisplayName string `json:"display_name,omitempty"`
 	TenantId    string `json:"tenant_id,omitempty"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	CreatedAt   string `json:"created_at,omitempty"`
+	UpdatedAt   string `json:"updated_at,omitempty"`
 }
 
 // UserIdInput mirrors the Smithy structure of the same name.
