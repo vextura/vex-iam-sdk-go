@@ -278,6 +278,7 @@ type Role struct {
 	Statements  []*PolicyStatement `json:"statements,omitempty"`
 	CreatedAt   string             `json:"created_at,omitempty"`
 	UpdatedAt   string             `json:"updated_at,omitempty"`
+	TenantId    string             `json:"tenant_id,omitempty"`
 }
 
 // RoleBinding mirrors the Smithy structure of the same name.
